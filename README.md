@@ -8,19 +8,17 @@
 
 Шутка | Original | T5 | Gemini 
 --- | --- | --- | ---
-What do The Sixth Sense and Titanic have in common? | Icy Dead People. | they are both about a woman | They both have terrible endings.
 If Hillary Clinton and Donald Drumpf are in a boat and it capsizes. Who survives? | America | Donald Drumpf |  I can't help with responses on elections and political figures right now.
 Why do Yoda's jokes always suck? | Says the punch line first, he does | Yoda is a snob | Because they're so old, they're always punchlines.
-What do you call a little Mexican? | A paragraph. Because he's not quite an essay | a little samoan | A mini-taco.
-Did you hear that Jared from Subway was caught up in a child pornography investigation? | Brings a whole new meaning to their slogan, "Eat Fresh." | Jared from Subway was caught up in a child pornography investigation | I'm unable to provide an answer to that question.
-Do you know what Twitter is?| It's the spot between your twat and shitter. | Twitter is a social networking site | It's a digital birdcage where people share their thoughts for the world to see. Or as some call it, a never-ending soap opera with way too many opinions.
+How do you call an unfanny comedian? | A youtuber | a fanny comedian | A job interviewer..
+What does rappers eat for breakfast? | Yo-ghurt | a burger | Microphone-sized pancakes..
 How many developers does it take to change a light bulb? | None. That's a hardware problem. | a light bulb is a light bulb | None. That's a hardware problem.
-What's the speed limit of sex? | 68 Because at 69, you flip over and eat it. | sex is a speed limit of 100 mph | Sixty-eight. At sixty-nine you have to turn around.
+What does Tarzan sing at Christmas? | Jungle Bells | santa claus | Jungle Bells, Jungle Bells, Jungle Bells...
 
 Как можно заметить Т5 не справляется с задачей. Gemini отвечает нанмого лучше, однако из-за фильтрации контента, не может ответить на ряд шуток.
 
 ## Оценка качества.
-Прежде чем заниматься моделью нужно определиться как собственно оценивать качество полученного результата? Проблематки здесь в том, что выбор метрики качества для такого рода задач не является тривиальным, так как юмор — субъективное понятие. И в идельных условях, нужна человечская разметка на `Рейтинг смешности` и `Рейтинг уместности`. Приедтся ориентироваться, на полученные результаты по примерам.
+Прежде чем заниматься моделью нужно определиться как собственно оценивать качество полученного результата? Проблематки здесь в том, что выбор метрики качества для такого рода задач не является тривиальным, так как юмор — субъективное понятие. И в идельных условях, нужна человечская разметка на `Рейтинг смешности` и `Рейтинг уместности`. В основном в задачах генерации текста применяются Bleu и Rogue, но обе эти метрики основанны на сравнении n gramm полученых результатов с эталонными. И в таких задачах где важна оригинальность, могут быть абсолютно не репрезентативными. Придется ориентироваться, на полученные результаты по примерам.
 
 ## Обработка данных и токенизация текста.
 К предобученым моделям идет свой предобученый токенизатор. Посмотрим на основные специальные токены, для понимания как формируется предложение.
@@ -62,17 +60,29 @@ Special token: pad_token has mask: <pad>, and it token num: 0
 - Быстрая адаптация: Если вам нужно быстро адаптировать модель к новой задаче, LoRA может значительно ускорить этот процесс.
 
 По хорошему подбором параметров нужно заниматься отдельно, пробовать разные и искать те что дают наилучший результат. Из-за того что у меня ограничены вычислительные ресурсы, парамтры были определены заранее и не изменялись. Параметры LoRA:
-- `rank=16` Параметр ранга отвечает за размер матриц низкого ранга, чем выше параметр тем больше матрицы, больший размер матриц позволяет модели более точно адаптироваться к новой задаче. Основная логика тут такая, чем больше модель тем больше ранг. Так же зависит от датасэта, при маленьком датасэте, стоит выбирать низкий ранг, иначе модель будет уходить в переобучение
-- `alpha=32` Параметр определяет, насколько сильно низкоранговые матрицы будут изменять поведение модели. Принцип выбора аналогичен рангу.
+- `rank=14` Параметр ранга отвечает за размер матриц низкого ранга, чем выше параметр тем больше матрицы, больший размер матриц позволяет модели более точно адаптироваться к новой задаче. Основная логика тут такая, чем больше модель тем больше ранг. Так же зависит от датасэта, при маленьком датасэте, стоит выбирать низкий ранг, иначе модель будет уходить в переобучение
+- `alpha=30` Параметр определяет, насколько сильно низкоранговые матрицы будут изменять поведение модели. Принцип выбора аналогичен рангу.
 - `dropout=0.05` это техника регуляризации, широко используемая в нейронных сетях для предотвращения переобучения. В контексте LoRA, dropout применяется к LoRA-матрицам, чтобы снизить их сложность и сделать модель более обобщающей. Во время обучения случайным образом отключается часть нейронов в LoRA-матрицах. Это предотвращает сильную зависимость модели от отдельных нейронов и помогает ей лучше обобщать на новые данные.
 
 После выбора параметров, получились следующие значения:
  - 787,868,672 общее кол-во обучаемых параметров в модели
- - 4,718,592 кол-во обучаемых параметров низкоранговых матриц LoRA, что составляет 0.5989% от общих параметров модели.
+ - 4,128,768 кол-во обучаемых параметров низкоранговых матриц LoRA, что составляет 0.5244% от общих параметров модели.
 
 ## Обучение модели.
 Изначально обучение модели планировалось производить на своём компьютере (RTX 3080ti в связке с Ryzen 5600x). Запуск процесса показал среднюю производительность - 6сек на итерацию. Что значит, что мне потребовалось бы порядка 12 часов на обучение для 5ти эпох. Поэтому я перевел процес на GoogleColab, где вычисление на GPU быстрее и составляют 2сек на итерацию. По итогу мне потребовалось порядка 4х часов для обучения модели. Потребление VRAM составило 12 гигабайт и 3 гигабайта оперативной памяти.
 
 ![alt text](imgs/img_1_resources.png "Испольозование ресурсов")
 
+![alt text](imgs/img_2_loss.png "Loss")
+
 ## Результаты
+Шутка | Original | T5 | Gemini | T5 Fine tuned
+--- | --- | --- | --- | ---
+If Hillary Clinton and Donald Drumpf are in a boat and it capsizes. Who survives? | America | Donald Drumpf |  I can't help with responses on elections and political figures right now. | America
+Why do Yoda's jokes always suck? | Says the punch line first, he does | Yoda is a snob | Because they're so old, they're always punchlines. | Because he's always a Yoda
+How do you call an unfanny comedian? | A youtuber | a fanny comedian | A job interviewer.. | A fanny comedian
+What does rappers eat for breakfast? | Yo-ghurt | a burger | Microphone-sized pancakes.. | Rape-a-tay
+How many developers does it take to change a light bulb? | None. That's a hardware problem. | a light bulb is a light bulb | None. That's a hardware problem. | None, they just hold the bulb and wait for the world to revolve around them
+What does Tarzan sing at Christmas? | Jungle Bells | santa claus | Jungle Bells, Jungle Bells, Jungle Bells... | I'm a taaaaaaaaa
+
+Как видно качество ответов значительно улучшилось в сравнении с обычной Т5, появилась часть оригинальности при ответах.
